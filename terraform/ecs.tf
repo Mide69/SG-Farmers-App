@@ -82,6 +82,30 @@ resource "aws_lb_target_group" "search_api" {
   }
 }
 
+resource "aws_lb_target_group" "chat_api" {
+  name     = "${var.project_name}-chat-api"
+  port     = 3002
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+  target_type = "ip"
+  
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = "/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    timeout             = 5
+    unhealthy_threshold = 2
+  }
+  
+  tags = {
+    Name = "${var.project_name}-chat-api-tg"
+  }
+}
+
 # ALB Listeners
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
@@ -125,6 +149,22 @@ resource "aws_lb_listener_rule" "search_api" {
   condition {
     path_pattern {
       values = ["/api/search/*"]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "chat_api" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 200
+  
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.chat_api.arn
+  }
+  
+  condition {
+    path_pattern {
+      values = ["/api/chat/*"]
     }
   }
 }

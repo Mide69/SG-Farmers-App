@@ -1,113 +1,227 @@
-# Grant Registration Service - Terraform Infrastructure
+# SG Farmers App - Terraform Infrastructure
 
-This Terraform configuration deploys the complete AWS infrastructure for the Grant Registration Service.
+## 🏗️ Enterprise-Grade Infrastructure as Code
 
-## Architecture Components
+This repository contains the complete AWS infrastructure for the SG Farmers App, organized using Terraform best practices with modular architecture, environment separation, and enterprise-level security.
 
-- **VPC** with public/private subnets across 2 AZs
-- **ECS Fargate** cluster for containerized services
-- **RDS PostgreSQL** Multi-AZ database
-- **ElastiCache Redis** for caching
-- **OpenSearch** for search functionality
-- **S3 + CloudFront** for frontend hosting
-- **Application Load Balancer** with WAF protection
-- **Route53** for DNS management
-- **ACM** for SSL certificates
-- **SQS/SNS** for messaging
-- **Lambda + API Gateway** for chat functionality
-- **CloudWatch** for monitoring and logging
+## 📁 Directory Structure
 
-## Prerequisites
+```
+terraform/
+├── environments/           # Environment-specific configurations
+│   ├── dev/               # Development environment
+│   ├── staging/           # Staging environment
+│   └── prod/              # Production environment
+├── modules/               # Reusable infrastructure modules
+│   ├── networking/        # VPC, subnets, routing
+│   ├── security/          # Security groups, WAF, ACM
+│   ├── compute/           # ECS, ALB, auto-scaling
+│   ├── database/          # RDS, ElastiCache, OpenSearch
+│   └── monitoring/        # CloudWatch, X-Ray, alarms
+├── shared/                # Shared configurations
+└── scripts/               # Deployment automation
+```
 
-1. AWS CLI configured with appropriate permissions
-2. Terraform >= 1.0 installed
-3. Domain registered in Route53
-4. S3 bucket for Terraform state (update in main.tf)
+## 🚀 Quick Start
 
-## Deployment Steps
+### Prerequisites
+- AWS CLI configured with appropriate permissions
+- Terraform >= 1.0 installed
+- S3 bucket for remote state storage
+- DynamoDB table for state locking
 
-### 1. Initialize Terraform
+### Deploy Infrastructure
 
 ```bash
-cd terraform
+# Navigate to environment
+cd environments/prod
+
+# Initialize Terraform
 terraform init
+
+# Plan deployment
+terraform plan -var-file="terraform.tfvars"
+
+# Apply changes
+terraform apply -var-file="terraform.tfvars"
 ```
 
-### 2. Create Variables File
+### Using Deployment Script
 
 ```bash
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
+# Make script executable
+chmod +x scripts/deploy.sh
+
+# Deploy to production
+./scripts/deploy.sh prod apply
+
+# Plan development changes
+./scripts/deploy.sh dev plan
+
+# Destroy staging environment
+./scripts/deploy.sh staging destroy
 ```
 
-### 3. Plan Deployment
+## 🏗️ Module Architecture
 
+### Networking Module
+- **VPC** with public, private, and database subnets
+- **Multi-AZ** deployment across 2-3 availability zones
+- **NAT Gateways** for private subnet internet access
+- **Route Tables** with proper routing configuration
+
+### Security Module
+- **Security Groups** with least privilege access
+- **AWS WAF** with OWASP protection rules
+- **SSL Certificates** via AWS Certificate Manager
+- **IAM Roles** with minimal required permissions
+
+### Compute Module
+- **ECS Fargate** cluster for containerized services
+- **Application Load Balancer** with path-based routing
+- **Auto Scaling** based on CPU/memory metrics
+- **Service Discovery** for microservices communication
+
+### Database Module
+- **RDS PostgreSQL** with Multi-AZ deployment
+- **ElastiCache Redis** for caching and sessions
+- **OpenSearch** for search functionality
+- **Automated backups** and point-in-time recovery
+
+### Monitoring Module
+- **CloudWatch** metrics, logs, and dashboards
+- **X-Ray** distributed tracing
+- **Custom alarms** for proactive monitoring
+- **SNS notifications** for critical alerts
+
+## 🌍 Environment Configurations
+
+### Development
+- **Cost-optimized** with smaller instance sizes
+- **Single AZ** deployment to reduce costs
+- **No NAT Gateway** (public subnets only)
+- **Minimal auto-scaling** (1-3 tasks)
+
+### Staging
+- **Production-like** configuration for testing
+- **Multi-AZ** deployment for reliability testing
+- **Moderate scaling** (1-5 tasks)
+- **Full monitoring** enabled
+
+### Production
+- **High availability** with Multi-AZ deployment
+- **Auto-scaling** (2-10 tasks) for peak loads
+- **Enhanced monitoring** and alerting
+- **Automated backups** and disaster recovery
+
+## 🔐 Security Best Practices
+
+### State Management
+- **Remote state** stored in encrypted S3 bucket
+- **State locking** with DynamoDB table
+- **Versioning** enabled for state file recovery
+- **Access logging** for audit trails
+
+### Secrets Management
+- **AWS Secrets Manager** for sensitive data
+- **Automatic rotation** for database passwords
+- **IAM policies** with least privilege access
+- **Encryption** at rest and in transit
+
+### Network Security
+- **Private subnets** for application and database tiers
+- **Security groups** with minimal required ports
+- **NACLs** for additional network-level protection
+- **VPC Flow Logs** for network monitoring
+
+## 📊 Cost Optimization
+
+### Resource Sizing
+- **Right-sized** instances based on environment
+- **Reserved Instances** for predictable workloads
+- **Spot Instances** for development environments
+- **Auto-scaling** to match demand
+
+### Storage Optimization
+- **GP3 volumes** for better price/performance
+- **S3 Lifecycle policies** for log archival
+- **Database storage** auto-scaling
+- **CloudWatch log retention** policies
+
+## 🔧 Maintenance & Operations
+
+### Regular Tasks
+- **Weekly**: Review CloudWatch metrics and costs
+- **Monthly**: Update Terraform providers and modules
+- **Quarterly**: Security audit and compliance review
+- **Annually**: Disaster recovery testing
+
+### Troubleshooting
 ```bash
-terraform plan
+# Check Terraform state
+terraform state list
+
+# Import existing resource
+terraform import aws_vpc.main vpc-12345678
+
+# Refresh state
+terraform refresh
+
+# Show current state
+terraform show
 ```
 
-### 4. Deploy Infrastructure
-
+### State Recovery
 ```bash
-terraform apply
+# List state backups
+aws s3 ls s3://terraform-state-bucket/prod/
+
+# Restore from backup
+aws s3 cp s3://terraform-state-bucket/prod/terraform.tfstate.backup terraform.tfstate
 ```
 
-### 5. Verify Deployment
+## 📈 Monitoring & Alerting
 
-```bash
-terraform output
-```
+### Key Metrics
+- **Application**: Response time, error rate, throughput
+- **Infrastructure**: CPU, memory, disk, network
+- **Database**: Connection count, query performance
+- **Cost**: Daily spend, resource utilization
 
-## Configuration Variables
+### Alert Thresholds
+- **Critical**: Error rate > 5%, Database CPU > 90%
+- **Warning**: Response time > 1s, Memory > 80%
+- **Info**: New deployments, scaling events
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `aws_region` | AWS region for deployment | `eu-west-2` |
-| `environment` | Environment name | `production` |
-| `project_name` | Project name prefix | `grant-registration-service` |
-| `domain_name` | Domain name for the application | Required |
+## 🤝 Contributing
 
-## Post-Deployment Steps
+### Development Workflow
+1. Create feature branch
+2. Make infrastructure changes
+3. Test in development environment
+4. Create pull request with plan output
+5. Review and approve changes
+6. Deploy to staging for validation
+7. Deploy to production
 
-1. **Build and push Docker images** to ECR repositories
-2. **Deploy application code** to ECS services
-3. **Upload frontend assets** to S3 bucket
-4. **Configure DNS records** if not using Route53
-5. **Set up monitoring alerts** and notification endpoints
+### Code Standards
+- **Terraform fmt** for consistent formatting
+- **Variable validation** for input constraints
+- **Resource tagging** for cost allocation
+- **Documentation** for all modules
 
-## Security Features
+## 📞 Support
 
-- All traffic encrypted with TLS 1.3
-- WAF protection against common attacks
-- VPC with private subnets for backend services
-- Security groups with least privilege access
-- Secrets stored in AWS Secrets Manager
-- Database and cache encryption at rest
+### Emergency Contacts
+- **DevOps Team**: devops@sg-farmers-app.com
+- **On-Call**: +65-XXXX-XXXX
+- **Slack**: #infrastructure-alerts
 
-## Monitoring
+### Runbooks
+- **Database Failover**: docs/runbooks/db-failover.md
+- **ECS Service Recovery**: docs/runbooks/ecs-recovery.md
+- **SSL Certificate Renewal**: docs/runbooks/ssl-renewal.md
 
-- CloudWatch dashboards for key metrics
-- Alarms for CPU, memory, and response times
-- Centralized logging with retention policies
-- X-Ray tracing for distributed requests
+---
 
-## Cost Optimization
-
-- Auto-scaling based on demand
-- Reserved capacity for baseline load
-- S3 lifecycle policies for log archival
-- Right-sized instances based on workload
-
-## Cleanup
-
-To destroy all resources:
-
-```bash
-terraform destroy
-```
-
-**Warning**: This will permanently delete all resources and data.
-
-## Support
-
-For issues or questions, refer to the main deployment guide or contact the development team.
+**Infrastructure managed with ❤️ by the DevOps Team**

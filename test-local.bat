@@ -59,6 +59,13 @@ if errorlevel 1 (
     echo ✓ Chat API - OK
 )
 
+curl -s http://localhost:9200/_cluster/health >nul 2>&1
+if errorlevel 1 (
+    echo ✗ Elasticsearch - FAILED
+) else (
+    echo ✓ Elasticsearch - OK
+)
+
 echo.
 echo Service Status:
 docker-compose ps
@@ -72,8 +79,10 @@ echo Frontend:        http://localhost
 echo Registration:    http://localhost/api/farmers
 echo Search:          http://localhost/api/search
 echo Chat:            http://localhost/api/chat
+echo Autocomplete:    http://localhost/api/search/autocomplete
 echo Database:        localhost:5432
 echo Redis:           localhost:6379
+echo Elasticsearch:   localhost:9200
 echo.
 echo To view logs:     docker-compose logs -f [service-name]
 echo To stop:          docker-compose down

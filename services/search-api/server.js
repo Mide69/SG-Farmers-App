@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 const redis = require('redis');
 const winston = require('winston');
+const { Client } = require('@elastic/elasticsearch');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +39,45 @@ const redisClient = redis.createClient({
 redisClient.on('error', (err) => logger.error('Redis Client Error', err));
 redisClient.connect();
 
+// Elasticsearch connection
+const esClient = new Client({
+  node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200'
+});
+
+// Initialize Elasticsearch index
+async function initializeElasticsearch() {
+  try {
+    const indexExists = await esClient.indices.exists({ index: 'farmers' });
+    if (!indexExists) {
+      await esClient.indices.create({
+        index: 'farmers',
+        body: {
+          mappings: {
+            properties: {
+              name: { type: 'text', analyzer: 'standard' },
+              email: { type: 'keyword' },
+              farm_location: { type: 'text', analyzer: 'standard' },
+              crop_types: { type: 'text', analyzer: 'standard' },
+              suggest: {
+                type: 'completion',
+                analyzer: 'simple',
+                preserve_separators: true,
+                preserve_position_increments: true,
+                max_input_length: 50
+              }
+            }
+          }
+        }
+      });
+      logger.info('Elasticsearch farmers index created');
+    }
+  } catch (error) {
+    logger.error('Elasticsearch initialization error:', error);
+  }
+}
+
+initializeElasticsearch();
+
 // Middleware
 app.use(helmet());
 app.use(compression());
@@ -56,10 +96,12 @@ app.get('/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     await redisClient.ping();
+    await esClient.ping();
     res.status(200).json({ 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
-      service: 'search-api'
+      service: 'search-api',
+      elasticsearch: 'connected'
     });
   } catch (error) {
     logger.error('Health check failed:', error);
@@ -234,7 +276,66 @@ app.get('/api/search/grants', async (req, res) => {
   }
 });
 
-// Get search suggestions
+// Elasticsearch autocomplete endpoint
+app.get('/api/search/autocomplete', async (req, res) => {
+  try {
+    const { q, type = 'all' } = req.query;
+    
+    if (!q || q.length < 2) {
+      return res.json({ success: true, suggestions: [] });
+    }
+    
+    const cacheKey = `autocomplete:${type}:${q}`;
+    const cached = await redisClient.get(cacheKey);
+    
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+    
+    let searchBody = {
+      suggest: {
+        farmer_suggest: {
+          prefix: q,
+          completion: {
+            field: 'suggest',
+            size: 10
+          }
+        }
+      }
+    };
+    
+    if (type !== 'all') {
+      searchBody.query = {
+        match: {
+          [type]: {
+            query: q,
+            fuzziness: 'AUTO'
+          }
+        }
+      };
+    }
+    
+    const result = await esClient.search({
+      index: 'farmers',
+      body: searchBody
+    });
+    
+    const suggestions = result.body.suggest.farmer_suggest[0].options.map(option => ({
+      text: option.text,
+      score: option._score
+    }));
+    
+    const response = { success: true, suggestions };
+    await redisClient.setEx(cacheKey, 300, JSON.stringify(response));
+    
+    res.json(response);
+  } catch (error) {
+    logger.error('Autocomplete error:', error);
+    res.status(500).json({ success: false, message: 'Autocomplete failed' });
+  }
+});
+
+// Get search suggestions (legacy endpoint)
 app.get('/api/search/suggestions', async (req, res) => {
   try {
     const { type, q } = req.query;

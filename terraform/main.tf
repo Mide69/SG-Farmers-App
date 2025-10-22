@@ -45,6 +45,12 @@ variable "domain_name" {
   type        = string
 }
 
+variable "openai_api_key" {
+  description = "OpenAI API key for chat functionality"
+  type        = string
+  sensitive   = true
+}
+
 # Data sources
 data "aws_availability_zones" "available" {
   state = "available"

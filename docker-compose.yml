@@ -24,6 +24,21 @@ services:
     networks:
       - app-network
 
+  # Elasticsearch for autocomplete
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - app-network
+
   # Registration API
   registration-api:
     build:
@@ -58,9 +73,11 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/sg_farmers_db
       REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
     depends_on:
       - postgres
       - redis
+      - elasticsearch
     networks:
       - app-network
     volumes:
@@ -126,6 +143,7 @@ services:
 
 volumes:
   postgres_data:
+  elasticsearch_data:
 
 networks:
   app-network:

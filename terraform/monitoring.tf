@@ -17,6 +17,15 @@ resource "aws_cloudwatch_log_group" "search_api" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "chat_api" {
+  name              = "/ecs/${var.project_name}-chat-api"
+  retention_in_days = 30
+  
+  tags = {
+    Name = "${var.project_name}-chat-api-logs"
+  }
+}
+
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "${var.project_name}-dashboard"

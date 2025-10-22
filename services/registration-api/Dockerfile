@@ -22,6 +22,9 @@ USER nodejs
 # Expose port
 EXPOSE 3000
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/health || exit 1

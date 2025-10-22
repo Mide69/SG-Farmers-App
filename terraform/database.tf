@@ -69,6 +69,20 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   })
 }
 
+# Store OpenAI API Key in Secrets Manager
+resource "aws_secretsmanager_secret" "openai_key" {
+  name = "${var.project_name}/openai/api-key"
+  
+  tags = {
+    Name = "${var.project_name}-openai-secret"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "openai_key" {
+  secret_id = aws_secretsmanager_secret.openai_key.id
+  secret_string = var.openai_api_key
+}
+
 # ElastiCache Subnet Group
 resource "aws_elasticache_subnet_group" "main" {
   name       = "${var.project_name}-cache-subnet"

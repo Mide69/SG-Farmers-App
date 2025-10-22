@@ -14,7 +14,7 @@
     "helmet": "^7.0.0",
     "pg": "^8.11.3",
     "redis": "^4.6.8",
-    "@elastic/elasticsearch": "^8.9.0",
+    "@elastic/elasticsearch": "^8.11.0",
     "winston": "^3.10.0",
     "express-rate-limit": "^6.10.0",
     "compression": "^1.7.4",
